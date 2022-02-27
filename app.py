@@ -1,70 +1,70 @@
-# AS simeple as possbile flask google oAuth 2.0
-from flask import Flask, redirect, url_for, session
-from authlib.integrations.flask_client import OAuth
-import os
-from datetime import timedelta
+from flask import Flask, jsonify, request
+from db import session, Cliente
+from db import Modalidade, Turno, Cidade, Instrutor, Cliente
 
-# decorator for routes that should be accessible only by logged in users
-from auth_decorator import login_required
-
-# dotenv setup
-from dotenv import load_dotenv
-load_dotenv()
-
-
-# App config
-app = Flask(__name__)
-# Session config
-app.secret_key = os.getenv("APP_SECRET_KEY")
-app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
-
-# oAuth Setup
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    access_token_params=None,
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    authorize_params=None,
-    api_base_url='https://www.googleapis.com/oauth2/v1/',
-    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',  # This is only needed if using openId to fetch user info
-    client_kwargs={'scope': 'openid email profile'},
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    get_jwt_identity
 )
 
+app = Flask(__name__)
 
-@app.route('/')
-@login_required
-def hello_world():
-    email = dict(session)['profile']['email']
-    return f'Hello, you are logge in as {email}!'
-
-
-@app.route('/login')
-def login():
-    google = oauth.create_client('google')  # create the google oauth client
-    redirect_uri = url_for('authorize', _external=True)
-    return google.authorize_redirect(redirect_uri)
+# Setup the Flask-JWT-Extended extension
+app.config["JWT_SECRET_KEY"] = "super-secret"  "ajwkelbejfhvskjehlwkjerf/nsddf"
+jwt = JWTManager(app)
 
 
-@app.route('/authorize')
-def authorize():
-    google = oauth.create_client('google')  # create the google oauth client
-    token = google.authorize_access_token()  # Access token from google (needed to get user info)
-    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
-    user_info = resp.json()
-    user = oauth.google.userinfo()  # uses openid endpoint to fetch user info
-    # Here you use the profile/user data that you got and query your database find/register the user
-    # and set ur own data in the session not the profile from google
-    session['profile'] = user_info
-    session.permanent = True  # make the session permanant so it keeps existing after broweser gets closed
-    return redirect('/')
+access_token = create_access_token(identity={"email": email})
+
+@app.route("/inicio", methods=["GET"])
+@app.route("/olamundo", methods=["GET"])
+def olamundo():
+    return "<h1> Ola Mundo </h1>", 201
 
 
-@app.route('/logout')
-def logout():
-    for key in list(session.keys()):
-        session.pop(key)
-    return redirect('/')
+@app.route("/cliente", methods=["GET", "POST"])
+@app.route("/cliente/<int:id_cliente>", methods=["GET", "PUT", "DELETE"])
+def clientes(id_cliente=None):
+    if request.method == "GET":
+        if id_cliente:
+            try:
+                cliente = (
+                    session.query(Cliente)
+                    .filter(Cliente.id == id_cliente)
+                    .one()
+                )
+                return (
+                    jsonify({"id": cliente.id, "nome": cliente.nome}),
+                    200,
+                )
+            except Exception as ex:
+                return "", 404
+        else:
+            lista_clientes = []
+            clientes = session.query(Cliente).all()
+            for c in clientes:
+                lista_clientes.append({"id": c.id, "nome": c.nome})
+            return jsonify(lista_clientes), 200
+    elif request.method == "POST":
+        cliente = request.json
+        session.add(
+            Cliente(nome=cliente["nome"], endereco=cliente["endereco"])
+        )
+        session.commit()
+        return "", 200
+    elif request.method == "PUT":
+        cliente = request.json
+        session.query(Cliente).filter(Cliente.id == id_cliente).update(
+            {"nome": cliente["nome"], "endereco": cliente["endereco"]}
+        )
+        session.commit()
+        return "", 200
+    elif request.method == "DELETE":
+        session.query(Cliente).filter(
+            Cliente.id == id_cliente
+        ).delete()
+        session.commit()
+        return "", 200
+
+
+app.run(host="0.0.0.0", port=8080)
