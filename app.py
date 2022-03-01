@@ -1,70 +1,75 @@
-from flask import Flask, jsonify, request
-from db import session, Cliente
-from db import Modalidade, Turno, Cidade, Instrutor, Cliente
+import flask
+from flask import request, jsonify
+import sqlite3
 
-from flask_jwt_extended import (
-    JWTManager, jwt_required, create_access_token,
-    get_jwt_identity
-)
-
-app = Flask(__name__)
-
-# Setup the Flask-JWT-Extended extension
-app.config["JWT_SECRET_KEY"] = "super-secret"  "ajwkelbejfhvskjehlwkjerf/nsddf"
-jwt = JWTManager(app)
+app = flask.Flask(__name__)
+app.config["DEBUG"] = True
 
 
-access_token = create_access_token(identity={"email": email})
-
-@app.route("/inicio", methods=["GET"])
-@app.route("/olamundo", methods=["GET"])
-def olamundo():
-    return "<h1> Ola Mundo </h1>", 201
-
-
-@app.route("/cliente", methods=["GET", "POST"])
-@app.route("/cliente/<int:id_cliente>", methods=["GET", "PUT", "DELETE"])
-def clientes(id_cliente=None):
-    if request.method == "GET":
-        if id_cliente:
-            try:
-                cliente = (
-                    session.query(Cliente)
-                    .filter(Cliente.id == id_cliente)
-                    .one()
-                )
-                return (
-                    jsonify({"id": cliente.id, "nome": cliente.nome}),
-                    200,
-                )
-            except Exception as ex:
-                return "", 404
-        else:
-            lista_clientes = []
-            clientes = session.query(Cliente).all()
-            for c in clientes:
-                lista_clientes.append({"id": c.id, "nome": c.nome})
-            return jsonify(lista_clientes), 200
-    elif request.method == "POST":
-        cliente = request.json
-        session.add(
-            Cliente(nome=cliente["nome"], endereco=cliente["endereco"])
-        )
-        session.commit()
-        return "", 200
-    elif request.method == "PUT":
-        cliente = request.json
-        session.query(Cliente).filter(Cliente.id == id_cliente).update(
-            {"nome": cliente["nome"], "endereco": cliente["endereco"]}
-        )
-        session.commit()
-        return "", 200
-    elif request.method == "DELETE":
-        session.query(Cliente).filter(
-            Cliente.id == id_cliente
-        ).delete()
-        session.commit()
-        return "", 200
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 
 
-app.run(host="0.0.0.0", port=8080)
+@app.route('/', methods=['GET'])
+def home():
+    return '''<h1>ACADEMIA</h1>
+<p>Bem vindos</p>'''
+
+
+@app.route('/api/v1/resources/clientes/all', methods=['GET'])
+def api_all():
+    conn = sqlite3.connect('academia.db')
+    conn.row_factory = dict_factory
+    cur = conn.cursor()
+    all_cliente = cur.execute('SELECT * FROM cliente;').fetchall()
+
+    return jsonify(all_cliente)
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return "<h1>404</h1><p>The resource could not be found.</p>", 404
+
+
+@app.route('/api/v1/resources/clientes', methods=['GET'])
+def api_filter():
+    query_parameters = request.args
+
+    cdCliente = query_parameters.get('cdCliente')
+    nomeCliente = query_parameters.get('nomeCliente')
+    telefone = query_parameters.get('telefone')
+    email = query_parameters.get('email')
+
+    query = "SELECT * FROM cliente WHERE"
+    to_filter = []
+
+    if cdCliente:
+        query += ' cdCliente=? AND'
+        to_filter.append(cdCliente)
+    if nomeCliente:
+        query += ' nomeCliente=? AND'
+        to_filter.append(nomeCliente)
+    if telefone:
+        query += ' telefone=? AND'
+        to_filter.append(telefone)
+    if email:
+        query += ' email=? AND'
+        to_filter.append(email)
+    if not (id or cdCliente or nomeCliente or telefone or email):
+        return page_not_found(404)
+
+    query = query[:-4] + ';'
+
+    conn = sqlite3.connect('academia.db')
+    conn.row_factory = dict_factory
+    cur = conn.cursor()
+
+    results = cur.execute(query, to_filter).fetchall()
+
+    return jsonify(results)
+
+
+app.run()
