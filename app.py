@@ -1,6 +1,7 @@
 import flask
 from flask import request, jsonify
 import sqlite3
+from db import session, Cliente
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -15,11 +16,11 @@ def dict_factory(cursor, row):
 
 @app.route('/', methods=['GET'])
 def home():
-    return '''<h1>ACADEMIA</h1>
-<p>Bem vindos</p>'''
+    return '''<h1>ACADEMIA POTENAY</h1>
+<p>Sejam Bem vindos</p>'''
 
 
-@app.route('/api/v1/resources/clientes/all', methods=['GET'])
+@app.route('/clientes/all', methods=['GET'])
 def api_all():
     conn = sqlite3.connect('academia.db')
     conn.row_factory = dict_factory
@@ -34,7 +35,7 @@ def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
 
 
-@app.route('/api/v1/resources/clientes', methods=['GET'])
+@app.route('/clientes', methods=['GET'])
 def api_filter():
     query_parameters = request.args
 
@@ -72,4 +73,4 @@ def api_filter():
     return jsonify(results)
 
 
-app.run()
+app.run(host="0.0.0.0", port=8080)
