@@ -1,15 +1,25 @@
 #from lib2to3.pytree import convert
-import _thread
 import json
 import os
 import time
 import zmq
+import sqlite3
 
 IP_ADDRESS = '10.0.1.1'
 TOPIC = None
 fila_msgs = []
 
 conf = []
+
+
+connection = sqlite3.connect('academia.db')
+
+cur = connection.cursor()
+
+cur.execute("SELECT *FROM cliente ")
+
+connection.commit()
+connection.close()
 
 
 def client():
@@ -29,31 +39,25 @@ def client():
         print("0 - Sair")
         opc = input('\nDigite uma Opcao: ')
 
+        listas = [[]]  # uma lista de lista
+
         if opc == '1':
             os.system('clear') or None
-            email = input("Digite o nome: ")
-            senha = input("Digite o telefone: ")
-            msg = {}
-            msg['codigo'] = 1
-            msg['codigo2'] = 1
-            msg['emaill'] = email
-            msg['senhaa'] = senha
-            msg_json = json.dumps(msg)
-            fila_msgs.append(msg_json)
+            email = input("Digite seu e-mail: ")
+            telefone = input("Digite o telefone: ")
+
         if opc == '2':
             os.system('clear') or None
-            nome = input("Digite o seu nome: ")
+
+            nova = []  # cria uma lista para adicionar o id, nome e idade da pessoa
+            nomeCliente = input("Digite o seu nome: ")
             email = input("Digite seu Email: ")
-            senha = input("Digite seu telefone: ")
-            msg = {}
-            msg['codigo'] = 2
-            msg['codigo2'] = 2
-            msg['nomee'] = nome
-            msg['emaill'] = email
-            msg['senhaa'] = senha
-            msg_json = json.dumps(msg)
-            fila_msgs.append(msg_json)
-            ri = 'sim'
+            telefone = input("Digite seu telefone: ")
+            nova.append(nomeCliente)
+            nova.append(email)
+            nova.append(telefone)
+            # Adiciona a lista criada com o cadastro da pessoa dentro da lista
+            listas.append(nova)
 
         if opc == '0':
             print("\nObrigado por utilizar nosso sistema! Volte sempre!!!\n")
@@ -79,7 +83,7 @@ def client():
             else:
 
                 print(
-                    "Houve um erro de conecçao tente mais tarde ou sua senha/login estao invalidos")
+                    "Houve um erro. Tente novamente senha ou login nao correspondem")
 
         if opcEntrada == 10:
             print("Login Realizado com Sucesso")
@@ -92,6 +96,7 @@ def client():
                 print(" 2 - Perfil ")
                 print(" 0 - Sair")
                 opc = input('Digite sua Opçao: ')
+
                 if opc == '1':
                     os.system('clear') or None
                     print("Ficha")
@@ -101,41 +106,6 @@ def client():
                     fila_msgs.append(msg_json)
                     opc = input("Digite o Codigo do produto: ")
                     os.system('clear') or None
-                    print("Dados do cartao")
-                    nomeTitular = input("Digite o nome do titular do cartao: ")
-                    codigoCartao = input("Digite o codigo do cartao: ")
-                    bandeiraCartao = input("Digite a bandeira: ")
-
-                    msg = {}
-                    msg['codigo'] = 9
-                    msg['emaill'] = email
-                    msg['status'] = 'Enviado_Para_Analise'
-                    msg['itencodigo'] = opc
-                    msg['nometitu'] = nomeTitular
-                    msg['codcart'] = codigoCartao
-                    msg['bandeira'] = bandeiraCartao
-                    msg_json = json.dumps(msg)
-                    fila_msgs.append(msg_json)
-                    # Enviar para o servidor
-                    opc = None
-
-                if opc == '2':
-                    msg = {}
-                    msg['codigo'] = 4
-                    msg['emaill'] = email
-                    msg_json = json.dumps(msg)
-                    fila_msgs.append(msg_json)
-                    time.sleep(10)
-
-                if opc == '3':
-                    msg = {}
-                    msg['codigo'] = 13
-                    msg['emaill'] = email
-                    msg_json = json.dumps(msg)
-                    fila_msgs.append(msg_json)
-                    os.system('clear') or None
-                    print("Lista de historio de compra")
-                    time.sleep(10)
 
 
 if __name__ == "__main__":
